@@ -40,7 +40,7 @@
                     url: 'https://orcid.org/oauth/userinfo',
                     headers: { 'Authorization': 'Bearer ' + accessToken },
                     success: function(data) {
-                        $("#name").text("Name: " + data.name);
+                        $("#name").text("Name: " + data.given_name + " " + data.family_name);
                         $("#orcidId").text("ORCID ID: " + data.sub);
                     },
                     error: function() {
