@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ORCID Login Demo</title>
+    <script src="https://kjur.github.io/jsrsasign/jsrsasign-latest-all-min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #userInfo { display: none; }
+    </style>
+</head>
+<body>
+    <a href="#" id="login">Sign into ORCID</a>
+    <div id="userInfo">
+        <h3>User Information:</h3>
+        <p id="name"></p>
+        <p id="orcidId"></p>
+        <button id="logout">Logout</button>
+    </div>
+
+    <script>
+        var clientId = "APP-FFRGVFLKABJ1F4R5";
+        var orcidAuthUrl = "https://orcid.org/oauth/authorize";
+        var redirectUri = "https%3A%2F%2Fjlumbroso.github.io%2Forcid-login-demo%2F";
+
+        function getFragmentParameterByName(name) {
+            var regex = new RegExp("[#&]" + name + "=([^&]*)"),
+                results = regex.exec(window.location.hash);
+            return results ? decodeURIComponent(results[1]) : null;
+        }
+
+        $(document).ready(function() {
+            var accessToken = getFragmentParameterByName("access_token");
+
+            if (accessToken) {
+                $("#login").hide();
+                $("#userInfo").show();
+                // Fetch user info
+                $.ajax({
+                    url: 'https://orcid.org/oauth/userinfo',
+                    headers: { 'Authorization': 'Bearer ' + accessToken },
+                    success: function(data) {
+                        $("#name").text("Name: " + data.name);
+                        $("#orcidId").text("ORCID ID: " + data.sub);
+                    },
+                    error: function() {
+                        $("#name").text("Error retrieving user info.");
+                    }
+                });
+            } else {
+                $("#login").attr("href", orcidAuthUrl + "?response_type=token&redirect_uri=" + redirectUri + "&client_id=" + clientId + "&scope=openid&nonce=whatever");
+            }
+
+            $("#logout").click(function() {
+                window.location.hash = '';
+                window.location.reload();
+            });
+        });
+    </script>
+</body>
+</html>
