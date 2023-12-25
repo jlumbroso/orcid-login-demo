@@ -28,20 +28,26 @@
         var orcidAuthUrl = "https://orcid.org/oauth/authorize";
         var redirectUri = "https%3A%2F%2Fjlumbroso.github.io%2Forcid-login-demo%2F";
 
+        var globRecord = null;
+
         function getFragmentParameterByName(name) {
             var regex = new RegExp("[#&]" + name + "=([^&]*)"),
                 results = regex.exec(window.location.hash);
             return results ? decodeURIComponent(results[1]) : null;
         }
 
-        function fetchOrcidData(orcidId) {
+        function fetchOrcidData(orcidId, accessToken) {
             var url = "https://pub.orcid.org/v3.0/" + orcidId + "/record";
 
             $.ajax({
                 url: url,
-                headers: { 'Accept': 'application/json' },
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': 'Bearer ' + accessToken
+                },
                 success: function(data) {
                     displayOrcidData(data);
+                    globRecord = data;
                 },
                 error: function() {
                     $("#orcidData").text("Error retrieving ORCID data.");
@@ -49,15 +55,37 @@
             });
         }
 
+        function formatRecordToHtml(jsonString) {
+            // Parse the JSON string
+            const record = JSON.parse(jsonString);
+
+            // Extract the necessary fields
+            const startYear = record['start-date']?.year?.value || 'Unknown';
+            const endYear = record['end-date'] ? record['end-date'].year.value : 'current';
+            const roleTitle = record['role-title'] || 'Unknown Role';
+            const organizationName = record.organization?.name || 'Unknown Organization';
+
+            // Construct the HTML string
+            const html = `<li>(
+                <span class="yearStart">${startYear}</span>-
+                <span class="yearEnd">${endYear}</span>) 
+                <span class="workTitle">${roleTitle}</span>, 
+                <span class="workOrg">${organizationName}</span>
+            </li>`;
+
+            return html;
+        }
+
+
         function displayOrcidData(data) {
             if (data.person && data.person.biography) {
                 $("#biography").text("Biography: " + data.person.biography.content);
             }
-            if (data.activitiesSummary && data.activitiesSummary.works) {
-                var works = data.activitiesSummary.works.group;
+            if (data["activities-summary"] && data["activities-summary"]["employments"] && data["activities-summary"]["employments"]["affiliation-group"]) {
+                var works = data["activities-summary"]["employments"]["affiliation-group"];
                 var worksList = works.map(function(workGroup) {
-                    var workTitle = workGroup["work-summary"][0].title.title.value;
-                    return "<li>" + workTitle + "</li>";
+                    var personData = workGroup['summaries'][0]["employment-summary"];
+                    return formatRecordToHtml(JSON.stringify(personData));
                 }).join("");
                 $("#works").html("<ul>" + worksList + "</ul>");
             }
@@ -75,7 +103,7 @@
                     success: function(data) {
                         $("#name").text("Name: " + data.given_name + " " + data.family_name);
                         $("#orcidId").text("ORCID ID: " + data.sub);
-                        fetchOrcidData(data.sub);
+                        fetchOrcidData(data.sub, accessToken);
                     },
                     error: function() {
                         $("#name").text("Error retrieving user info.");
