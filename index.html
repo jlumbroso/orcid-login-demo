@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ORCID Login Demo</title>
+    <title>ORCID Login and Data Retrieval Demo</title>
     <script src="https://kjur.github.io/jsrsasign/jsrsasign-latest-all-min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        #userInfo { display: none; }
+        #userInfo, #orcidData { display: none; }
     </style>
 </head>
 <body>
@@ -16,6 +16,11 @@
         <p id="name"></p>
         <p id="orcidId"></p>
         <button id="logout">Logout</button>
+    </div>
+    <div id="orcidData">
+        <h3>ORCID Data:</h3>
+        <p id="biography"></p>
+        <div id="works"></div>
     </div>
 
     <script>
@@ -29,19 +34,48 @@
             return results ? decodeURIComponent(results[1]) : null;
         }
 
+        function fetchOrcidData(orcidId) {
+            var url = "https://pub.orcid.org/v3.0/" + orcidId + "/record";
+
+            $.ajax({
+                url: url,
+                headers: { 'Accept': 'application/json' },
+                success: function(data) {
+                    displayOrcidData(data);
+                },
+                error: function() {
+                    $("#orcidData").text("Error retrieving ORCID data.");
+                }
+            });
+        }
+
+        function displayOrcidData(data) {
+            if (data.person && data.person.biography) {
+                $("#biography").text("Biography: " + data.person.biography.content);
+            }
+            if (data.activitiesSummary && data.activitiesSummary.works) {
+                var works = data.activitiesSummary.works.group;
+                var worksList = works.map(function(workGroup) {
+                    var workTitle = workGroup["work-summary"][0].title.title.value;
+                    return "<li>" + workTitle + "</li>";
+                }).join("");
+                $("#works").html("<ul>" + worksList + "</ul>");
+            }
+        }
+
         $(document).ready(function() {
             var accessToken = getFragmentParameterByName("access_token");
 
             if (accessToken) {
                 $("#login").hide();
                 $("#userInfo").show();
-                // Fetch user info
                 $.ajax({
                     url: 'https://orcid.org/oauth/userinfo',
                     headers: { 'Authorization': 'Bearer ' + accessToken },
                     success: function(data) {
                         $("#name").text("Name: " + data.given_name + " " + data.family_name);
                         $("#orcidId").text("ORCID ID: " + data.sub);
+                        fetchOrcidData(data.sub);
                     },
                     error: function() {
                         $("#name").text("Error retrieving user info.");
