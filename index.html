@@ -166,8 +166,8 @@
                     url: 'https://orcid.org/oauth/userinfo',
                     headers: { 'Authorization': 'Bearer ' + accessToken },
                     success: function(data) {
-                        $("#name").text("Name: " + data.given_name + " " + data.family_name);
-                        $("#orcidId").text("ORCID ID: " + data.sub);
+                        $("#name").text(data.given_name + " " + data.family_name);
+                        $("#orcidId").text(data.sub);
                         fetchOrcidData(data.sub, accessToken);
                     },
                     error: function() {
